@@ -1,0 +1,29 @@
+{
+	"name": "chatgptkaraokequeue",
+	"version": "1.0.0",
+	"main": "server.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node server.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"dependencies": {
+		"cors": "^2.8.5",
+		"dotenv": "^16.4.7",
+		"express": "^5.1.0",
+		"node-fetch": "^3.3.2"
+	},
+	"bin": "server.js",
+	"type": "commonjs",
+	"pkg": {
+		"assets": [
+			"public/**/*"
+		],
+		"scripts": [
+			"server.js"
+		]
+	}
+}
