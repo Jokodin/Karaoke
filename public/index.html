@@ -1,53 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Add to Karaoke Queue</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-top: 50px;
-    }
-    #confirmation {
-      color: green;
-      font-weight: bold;
-      margin-top: 20px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Add to Karaoke Queue</h1>
-  <input id="youtube-url" type="text" placeholder="Paste YouTube link here" size="50" />
-  <button id="submit-btn">Add to Queue</button>
-  <p id="confirmation" style="display: none;">Video successfully added to queue!</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add to Karaoke Queue</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 50px;
+      }
+      #confirmation {
+        color: green;
+        font-weight: bold;
+        margin-top: 20px;
+      }
+      .error {
+        color: red;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Add to Karaoke Queue</h1>
+    <input id="youtube-url" type="text" placeholder="Paste YouTube link here" size="50" />
+    <button id="submit-btn">Add to Queue</button>
+    <p id="confirmation" style="display: none">Video successfully added to queue!</p>
+    <p id="error" class="error" style="display: none"></p>
 
-  <script>
-    const submitBtn = document.getElementById("submit-btn");
-    const urlInput = document.getElementById("youtube-url");
-    const confirmation = document.getElementById("confirmation");
+    <script>
+      const submitBtn = document.getElementById("submit-btn");
+      const urlInput = document.getElementById("youtube-url");
+      const confirmation = document.getElementById("confirmation");
+      const error = document.getElementById("error");
 
-    submitBtn.onclick = async () => {
-      const url = urlInput.value.trim();
-      if (!url) return;
+      submitBtn.onclick = () => {
+        const url = urlInput.value.trim();
+        if (!url) {
+          showError("Please enter a YouTube URL");
+          return;
+        }
 
-      const response = await fetch("/api/queue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
+        // Basic YouTube URL validation
+        const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+        if (!youtubeRegex.test(url)) {
+          showError("Please enter a valid YouTube URL");
+          return;
+        }
 
-      if (response.ok) {
+        // Store in localStorage for demo purposes
+        const queue = JSON.parse(localStorage.getItem("karaokeQueue") || "[]");
+        queue.push(url);
+        localStorage.setItem("karaokeQueue", JSON.stringify(queue));
+
+        // Show success message
         urlInput.style.display = "none";
         submitBtn.style.display = "none";
         confirmation.style.display = "block";
-      } else {
-        alert("Failed to add video. Make sure it's a valid YouTube link.");
+      };
+
+      function showError(message) {
+        error.textContent = message;
+        error.style.display = "block";
+        setTimeout(() => {
+          error.style.display = "none";
+        }, 3000);
       }
-    };
-  </script>
-</body>
+    </script>
+  </body>
 </html>
