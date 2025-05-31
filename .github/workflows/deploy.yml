@@ -18,9 +18,12 @@ jobs:
           # Move public contents to root
           mv public/* .
           rm -rf public
+          # Ensure .nojekyll exists
+          touch .nojekyll
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
+          force_orphan: true
