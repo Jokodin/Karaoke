@@ -33,6 +33,20 @@
         gap: 10px;
       }
 
+      #clear-queue {
+        background-color: #ff4444;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: auto;
+      }
+
+      #clear-queue:hover {
+        background-color: #cc0000;
+      }
+
       #queue-section {
         flex: 1;
         background: #f4f4f4;
@@ -72,6 +86,7 @@
       <div id="controls">
         <button id="prev">Previous</button>
         <button id="next">Next</button>
+        <button id="clear-queue">Clear Queue</button>
       </div>
     </div>
     <div id="queue-section">
@@ -177,6 +192,28 @@
 
       document.getElementById("prev").onclick = () => {
         refreshQueueAndPlay(-1);
+      };
+
+      document.getElementById("clear-queue").onclick = async () => {
+        if (!confirm("Are you sure you want to clear the queue?")) return;
+
+        try {
+          const response = await fetch("/api/queue", {
+            method: "DELETE",
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to clear queue");
+          }
+
+          queue = [];
+          currentIndex = 0;
+          player.stopVideo();
+          renderQueue();
+        } catch (err) {
+          console.error("Failed to clear queue:", err);
+          alert("Failed to clear queue. Please try again.");
+        }
       };
 
       // Poll for queue updates every 5 seconds, but don't reload current video

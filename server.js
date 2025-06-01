@@ -66,6 +66,12 @@ app.get("/api/queue", (req, res) => {
 	res.json(queue);
 });
 
+app.delete("/api/queue", (req, res) => {
+	queue = [];
+	fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue, null, 2));
+	res.status(200).json({ success: true });
+});
+
 // Serve static files for frontends
 app.use(express.static("public"));
 
