@@ -1,187 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Karaoke Queue Player</title>
-  <style>
-	body {
-	  display: flex;
-	  font-family: Arial, sans-serif;
-	  margin: 0;
-	  height: 100vh;
-	  overflow: hidden;
-	}
-
-	#video-section {
-	  flex: 3;
-	  padding: 20px;
-	  display: flex;
-	  flex-direction: column;
-	  justify-content: center;
-	}
-
-	iframe {
-	  width: 100%;
-	  height: calc(100vh - 100px); /* leave room for buttons */
-	  border-radius: 8px;
-	}
-
-	#controls {
-	  margin-top: 10px;
-	  display: flex;
-	  gap: 10px;
-	}
-
-	#queue-section {
-	  flex: 1;
-	  background: #f4f4f4;
-	  padding: 20px;
-	  overflow-y: auto;
-	  border-left: 2px solid #ccc;
-	}
-
-	.queue-item {
-	  margin: 10px 0;
-	}
-	.current {
-	  font-weight: bold;
-	  color: green;
-	}
-	
-	#qr-code {
-	  position: fixed;
-	  bottom: 20px;
-	  right: 20px;
-	  background: white;
-	  padding: 10px;
-	  border: 1px solid #ccc;
-	  box-shadow: 0 0 10px rgba(0,0,0,0.2);
-	  border-radius: 8px;
-	  z-index: 999;
-	}
-	#qr-code canvas {
-	  width: 200px;
-	  height: 200px;
-	}
-  </style>
-</head>
-<body>
-  <div id="video-section">
-	<div id="player"></div>
-    <div id="controls">
-      <button id="prev">Previous</button>
-      <button id="next">Next</button>
-    </div>
-  </div>
-  <div id="queue-section">
-    <h2>Queue</h2>
-    <div id="queue-list"></div>
-  </div>
-<script src="https://www.youtube.com/iframe_api"></script>
-<script>
-  let queue = [];
-  let currentIndex = 0;
-  let player;
-
-  // Called by YouTube API when ready
-function onYouTubeIframeAPIReady() {
-  loadQueueAndInitPlayer();
-}
-
-  async function loadQueueAndInitPlayer() {
-    const res = await fetch("/api/queue");
-    queue = await res.json();
-    if (!Array.isArray(queue) || queue.length === 0) return;
-
-    const videoId = extractVideoId(queue[currentIndex].url);
-    player = new YT.Player("player", {
-      height: "100%",
-      width: "100%",
-      videoId: videoId,
-      playerVars: {
-        autoplay: 1,
-        rel: 0,
-        modestbranding: 1
-      },
-      events: {
-        onReady: renderQueue,
-        onStateChange: onPlayerStateChange
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Karaoke Queue Player</title>
+    <style>
+      body {
+        display: flex;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
       }
-    });
-  }
 
-  function onPlayerStateChange(event) {
-    // When video ends
-    if (event.data === YT.PlayerState.ENDED) {
-      if (currentIndex < queue.length - 1) {
-        currentIndex++;
-        player.loadVideoById(extractVideoId(queue[currentIndex].url));
+      #video-section {
+        flex: 3;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      iframe {
+        width: 100%;
+        height: calc(100vh - 100px); /* leave room for buttons */
+        border-radius: 8px;
+      }
+
+      #controls {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+      }
+
+      #queue-section {
+        flex: 1;
+        background: #f4f4f4;
+        padding: 20px;
+        overflow-y: auto;
+        border-left: 2px solid #ccc;
+      }
+
+      .queue-item {
+        margin: 10px 0;
+      }
+      .current {
+        font-weight: bold;
+        color: green;
+      }
+
+      #qr-code {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        padding: 10px;
+        border: 1px solid #ccc;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        z-index: 999;
+      }
+      #qr-code canvas {
+        width: 200px;
+        height: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="video-section">
+      <div id="player"></div>
+      <div id="controls">
+        <button id="prev">Previous</button>
+        <button id="next">Next</button>
+      </div>
+    </div>
+    <div id="queue-section">
+      <h2>Queue</h2>
+      <div id="queue-list"></div>
+    </div>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+      let queue = [];
+      let currentIndex = 0;
+      let player;
+
+      // Called by YouTube API when ready
+      function onYouTubeIframeAPIReady() {
+        loadQueueAndInitPlayer();
+      }
+
+      function loadQueueAndInitPlayer() {
+        // Load queue from localStorage
+        queue = JSON.parse(localStorage.getItem("karaokeQueue") || "[]");
+        if (!Array.isArray(queue) || queue.length === 0) return;
+
+        const videoId = extractVideoId(queue[currentIndex]);
+        player = new YT.Player("player", {
+          height: "100%",
+          width: "100%",
+          videoId: videoId,
+          playerVars: {
+            autoplay: 1,
+            rel: 0,
+            modestbranding: 1,
+          },
+          events: {
+            onReady: renderQueue,
+            onStateChange: onPlayerStateChange,
+          },
+        });
+      }
+
+      function onPlayerStateChange(event) {
+        // When video ends
+        if (event.data === YT.PlayerState.ENDED) {
+          if (currentIndex < queue.length - 1) {
+            currentIndex++;
+            player.loadVideoById(extractVideoId(queue[currentIndex]));
+            renderQueue();
+          }
+        }
+      }
+
+      function refreshQueueAndPlay(indexChange = 0) {
+        // Load queue from localStorage
+        queue = JSON.parse(localStorage.getItem("karaokeQueue") || "[]");
+        if (!Array.isArray(queue) || queue.length === 0) return;
+
+        currentIndex = Math.max(0, Math.min(currentIndex + indexChange, queue.length - 1));
+        player.loadVideoById(extractVideoId(queue[currentIndex]));
         renderQueue();
       }
-    }
-  }
 
-  async function refreshQueueAndPlay(indexChange = 0) {
-    const res = await fetch("/api/queue");
-    const updatedQueue = await res.json();
-
-    if (!Array.isArray(updatedQueue) || updatedQueue.length === 0) return;
-
-    currentIndex = Math.max(0, Math.min(currentIndex + indexChange, updatedQueue.length - 1));
-    queue = updatedQueue;
-
-    player.loadVideoById(extractVideoId(queue[currentIndex].url));
-    renderQueue();
-  }
-
-  function extractVideoId(url) {
-    try {
-      const parsed = new URL(url);
-      if (parsed.hostname.includes("youtu.be")) {
-        return parsed.pathname.slice(1);
+      function extractVideoId(url) {
+        try {
+          const parsed = new URL(url);
+          if (parsed.hostname.includes("youtu.be")) {
+            return parsed.pathname.slice(1);
+          }
+          if (parsed.hostname.includes("youtube.com")) {
+            return parsed.searchParams.get("v");
+          }
+        } catch (e) {
+          return null;
+        }
+        return null;
       }
-      if (parsed.hostname.includes("youtube.com")) {
-        return parsed.searchParams.get("v");
+
+      function renderQueue() {
+        const list = document.getElementById("queue-list");
+        list.innerHTML = "";
+        queue.forEach((url, index) => {
+          const div = document.createElement("div");
+          div.className = "queue-item" + (index === currentIndex ? " current" : "");
+          div.textContent = `Video ${index + 1}`;
+          list.appendChild(div);
+        });
       }
-    } catch (e) {
-      return null;
-    }
-    return null;
-  }
 
-  function renderQueue() {
-    const list = document.getElementById("queue-list");
-    list.innerHTML = "";
-    queue.forEach((item, index) => {
-      const div = document.createElement("div");
-      div.className = "queue-item" + (index === currentIndex ? " current" : "");
-      div.textContent = item.title;
-      list.appendChild(div);
-    });
-  }
+      document.getElementById("next").onclick = () => {
+        refreshQueueAndPlay(1);
+      };
 
-  document.getElementById("next").onclick = () => {
-    refreshQueueAndPlay(1);
-  };
-
-  document.getElementById("prev").onclick = () => {
-    refreshQueueAndPlay(-1);
-  };
-</script>
-<div id="qr-code">
-  <canvas id="qr-canvas"></canvas>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-<script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const qr = new QRious({
-      element: document.getElementById('qr-canvas'),
-      value: 'http://192.168.1.169:3000',
-      size: 100
-    });
-  });
-</script>
-
-</body>
+      document.getElementById("prev").onclick = () => {
+        refreshQueueAndPlay(-1);
+      };
+    </script>
+    <div id="qr-code">
+      <canvas id="qr-canvas"></canvas>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        const qr = new QRious({
+          element: document.getElementById("qr-canvas"),
+          value: window.location.href,
+          size: 100,
+        });
+      });
+    </script>
+  </body>
 </html>
