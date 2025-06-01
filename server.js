@@ -47,28 +47,48 @@ async function getVideoTitle(videoId) {
 
 app.post("/api/queue", async (req, res) => {
 	const { url } = req.body;
+	console.log("Received URL:", url);
+
 	const videoId = extractVideoId(url);
-	if (!videoId) return res.status(400).json({ error: "Invalid YouTube URL" });
+	if (!videoId) {
+		console.log("Invalid video ID extracted from URL");
+		return res.status(400).json({ error: "Invalid YouTube URL" });
+	}
+	console.log("Extracted video ID:", videoId);
 
 	try {
+		// Check for duplicate video ID
+		if (queue.some(video => extractVideoId(video.url) === videoId)) {
+			console.log("Duplicate video detected");
+			return res.status(400).json({ error: "This video is already in the queue" });
+		}
+
 		const title = await getVideoTitle(videoId);
+		console.log("Fetched title:", title);
+
 		const video = { url, title };
 		queue.push(video);
+		console.log("Current queue length:", queue.length);
+		console.log("Queue contents:", queue);
+
 		fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue, null, 2));
 		res.status(200).json({ success: true });
 	} catch (err) {
-		console.error(err);
+		console.error("Error in POST /api/queue:", err);
 		res.status(500).json({ error: "Failed to fetch video info" });
 	}
 });
 
 app.get("/api/queue", (req, res) => {
+	console.log("GET /api/queue - Current queue:", queue);
 	res.json(queue);
 });
 
 app.delete("/api/queue", (req, res) => {
+	console.log("Clearing queue");
 	queue = [];
 	fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue, null, 2));
+	console.log("Queue cleared and saved");
 	res.status(200).json({ success: true });
 });
 
