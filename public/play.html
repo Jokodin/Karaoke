@@ -149,11 +149,17 @@
 
           // Only update if queue has changed or we're changing index
           const queueChanged = JSON.stringify(queue) !== JSON.stringify(updatedQueue);
-          if (queueChanged || indexChange !== 0) {
-            currentIndex = Math.max(0, Math.min(currentIndex + indexChange, updatedQueue.length - 1));
-            queue = updatedQueue;
+
+          // Update the queue display regardless
+          queue = updatedQueue;
+          renderQueue();
+
+          // Only reload video if:
+          // 1. We're explicitly changing index (prev/next buttons)
+          // 2. The current video is no longer in the queue
+          if (indexChange !== 0 || !queue[currentIndex]) {
+            currentIndex = Math.max(0, Math.min(currentIndex + indexChange, queue.length - 1));
             player.loadVideoById(extractVideoId(queue[currentIndex].url));
-            renderQueue();
           }
         } catch (err) {
           console.error("Failed to refresh queue:", err);
