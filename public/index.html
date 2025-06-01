@@ -36,7 +36,7 @@
       const confirmation = document.getElementById("confirmation");
       const error = document.getElementById("error");
 
-      submitBtn.onclick = () => {
+      submitBtn.onclick = async () => {
         const url = urlInput.value.trim();
         if (!url) {
           showError("Please enter a YouTube URL");
@@ -50,15 +50,29 @@
           return;
         }
 
-        // Store in localStorage for demo purposes
-        const queue = JSON.parse(localStorage.getItem("karaokeQueue") || "[]");
-        queue.push(url);
-        localStorage.setItem("karaokeQueue", JSON.stringify(queue));
+        try {
+          const response = await fetch("/api/queue", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url }),
+          });
 
-        // Show success message
-        urlInput.style.display = "none";
-        submitBtn.style.display = "none";
-        confirmation.style.display = "block";
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Failed to add video");
+          }
+
+          // Show success message
+          urlInput.value = "";
+          confirmation.style.display = "block";
+          setTimeout(() => {
+            confirmation.style.display = "none";
+          }, 3000);
+        } catch (err) {
+          showError(err.message);
+        }
       };
 
       function showError(message) {

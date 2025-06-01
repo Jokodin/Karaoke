@@ -89,26 +89,30 @@
         loadQueueAndInitPlayer();
       }
 
-      function loadQueueAndInitPlayer() {
-        // Load queue from localStorage
-        queue = JSON.parse(localStorage.getItem("karaokeQueue") || "[]");
-        if (!Array.isArray(queue) || queue.length === 0) return;
+      async function loadQueueAndInitPlayer() {
+        try {
+          const response = await fetch("/api/queue");
+          queue = await response.json();
+          if (!Array.isArray(queue) || queue.length === 0) return;
 
-        const videoId = extractVideoId(queue[currentIndex]);
-        player = new YT.Player("player", {
-          height: "100%",
-          width: "100%",
-          videoId: videoId,
-          playerVars: {
-            autoplay: 1,
-            rel: 0,
-            modestbranding: 1,
-          },
-          events: {
-            onReady: renderQueue,
-            onStateChange: onPlayerStateChange,
-          },
-        });
+          const videoId = extractVideoId(queue[currentIndex].url);
+          player = new YT.Player("player", {
+            height: "100%",
+            width: "100%",
+            videoId: videoId,
+            playerVars: {
+              autoplay: 1,
+              rel: 0,
+              modestbranding: 1,
+            },
+            events: {
+              onReady: renderQueue,
+              onStateChange: onPlayerStateChange,
+            },
+          });
+        } catch (err) {
+          console.error("Failed to load queue:", err);
+        }
       }
 
       function onPlayerStateChange(event) {
@@ -116,20 +120,25 @@
         if (event.data === YT.PlayerState.ENDED) {
           if (currentIndex < queue.length - 1) {
             currentIndex++;
-            player.loadVideoById(extractVideoId(queue[currentIndex]));
+            player.loadVideoById(extractVideoId(queue[currentIndex].url));
             renderQueue();
           }
         }
       }
 
-      function refreshQueueAndPlay(indexChange = 0) {
-        // Load queue from localStorage
-        queue = JSON.parse(localStorage.getItem("karaokeQueue") || "[]");
-        if (!Array.isArray(queue) || queue.length === 0) return;
+      async function refreshQueueAndPlay(indexChange = 0) {
+        try {
+          const response = await fetch("/api/queue");
+          const updatedQueue = await response.json();
+          if (!Array.isArray(updatedQueue) || updatedQueue.length === 0) return;
 
-        currentIndex = Math.max(0, Math.min(currentIndex + indexChange, queue.length - 1));
-        player.loadVideoById(extractVideoId(queue[currentIndex]));
-        renderQueue();
+          currentIndex = Math.max(0, Math.min(currentIndex + indexChange, updatedQueue.length - 1));
+          queue = updatedQueue;
+          player.loadVideoById(extractVideoId(queue[currentIndex].url));
+          renderQueue();
+        } catch (err) {
+          console.error("Failed to refresh queue:", err);
+        }
       }
 
       function extractVideoId(url) {
@@ -150,10 +159,10 @@
       function renderQueue() {
         const list = document.getElementById("queue-list");
         list.innerHTML = "";
-        queue.forEach((url, index) => {
+        queue.forEach((item, index) => {
           const div = document.createElement("div");
           div.className = "queue-item" + (index === currentIndex ? " current" : "");
-          div.textContent = `Video ${index + 1}`;
+          div.textContent = item.title;
           list.appendChild(div);
         });
       }
@@ -165,6 +174,9 @@
       document.getElementById("prev").onclick = () => {
         refreshQueueAndPlay(-1);
       };
+
+      // Poll for queue updates every 5 seconds
+      setInterval(refreshQueueAndPlay, 5000);
     </script>
     <div id="qr-code">
       <canvas id="qr-canvas"></canvas>
@@ -174,7 +186,7 @@
       window.addEventListener("DOMContentLoaded", () => {
         const qr = new QRious({
           element: document.getElementById("qr-canvas"),
-          value: "https://jokodin.github.io/Karaoke",
+          value: window.location.origin,
           size: 100,
         });
       });
