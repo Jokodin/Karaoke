@@ -132,10 +132,14 @@
           const updatedQueue = await response.json();
           if (!Array.isArray(updatedQueue) || updatedQueue.length === 0) return;
 
-          currentIndex = Math.max(0, Math.min(currentIndex + indexChange, updatedQueue.length - 1));
-          queue = updatedQueue;
-          player.loadVideoById(extractVideoId(queue[currentIndex].url));
-          renderQueue();
+          // Only update if queue has changed or we're changing index
+          const queueChanged = JSON.stringify(queue) !== JSON.stringify(updatedQueue);
+          if (queueChanged || indexChange !== 0) {
+            currentIndex = Math.max(0, Math.min(currentIndex + indexChange, updatedQueue.length - 1));
+            queue = updatedQueue;
+            player.loadVideoById(extractVideoId(queue[currentIndex].url));
+            renderQueue();
+          }
         } catch (err) {
           console.error("Failed to refresh queue:", err);
         }
@@ -175,8 +179,8 @@
         refreshQueueAndPlay(-1);
       };
 
-      // Poll for queue updates every 5 seconds
-      setInterval(refreshQueueAndPlay, 5000);
+      // Poll for queue updates every 5 seconds, but don't reload current video
+      setInterval(() => refreshQueueAndPlay(0), 5000);
     </script>
     <div id="qr-code">
       <canvas id="qr-canvas"></canvas>
