@@ -78,6 +78,30 @@
         width: 200px;
         height: 200px;
       }
+
+      #error-message {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        display: none;
+        z-index: 1000;
+      }
+
+      #error-message a {
+        color: #ff0000;
+        text-decoration: none;
+        font-weight: bold;
+      }
+
+      #error-message a:hover {
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body>
@@ -92,6 +116,12 @@
     <div id="queue-section">
       <h2>Queue</h2>
       <div id="queue-list"></div>
+    </div>
+    <div id="error-message">
+      <h3>Video Cannot Be Embedded</h3>
+      <p>This video's owner has disabled embedding.</p>
+      <p>You can watch it on YouTube instead:</p>
+      <a id="youtube-link" href="#" target="_blank">Open on YouTube</a>
     </div>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
@@ -123,6 +153,7 @@
             events: {
               onReady: renderQueue,
               onStateChange: onPlayerStateChange,
+              onError: onPlayerError,
             },
           });
         } catch (err) {
@@ -138,6 +169,18 @@
             player.loadVideoById(extractVideoId(queue[currentIndex].url));
             renderQueue();
           }
+        }
+      }
+
+      function onPlayerError(event) {
+        console.error("Player error:", event.data);
+        if (event.data === 150 || event.data === 101) {
+          // 150: Video cannot be embedded
+          // 101: Video is private
+          const errorMessage = document.getElementById("error-message");
+          const youtubeLink = document.getElementById("youtube-link");
+          youtubeLink.href = queue[currentIndex].url;
+          errorMessage.style.display = "block";
         }
       }
 
@@ -160,6 +203,8 @@
           if (indexChange !== 0 || !queue[currentIndex]) {
             currentIndex = Math.max(0, Math.min(currentIndex + indexChange, queue.length - 1));
             player.loadVideoById(extractVideoId(queue[currentIndex].url));
+            // Hide error message when changing videos
+            document.getElementById("error-message").style.display = "none";
           }
         } catch (err) {
           console.error("Failed to refresh queue:", err);

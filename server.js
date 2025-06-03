@@ -39,10 +39,20 @@ function extractVideoId(url) {
 }
 
 async function getVideoTitle(videoId) {
-	const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${YOUTUBE_API_KEY}`;
+	const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,status&id=${videoId}&key=${YOUTUBE_API_KEY}`;
 	const res = await fetch(apiUrl);
 	const data = await res.json();
-	return data.items?.[0]?.snippet?.title || "Unknown Title";
+
+	if (!data.items?.[0]) {
+		throw new Error("Video not found");
+	}
+
+	const video = data.items[0];
+	if (!video.status.embeddable) {
+		throw new Error("Video cannot be embedded");
+	}
+
+	return video.snippet.title || "Unknown Title";
 }
 
 app.post("/api/queue", async (req, res) => {
@@ -75,7 +85,11 @@ app.post("/api/queue", async (req, res) => {
 		res.status(200).json({ success: true });
 	} catch (err) {
 		console.error("Error in POST /api/queue:", err);
-		res.status(500).json({ error: "Failed to fetch video info" });
+		if (err.message === "Video cannot be embedded") {
+			res.status(400).json({ error: "This video cannot be embedded. Please choose a different video." });
+		} else {
+			res.status(500).json({ error: "Failed to fetch video info" });
+		}
 	}
 });
 
