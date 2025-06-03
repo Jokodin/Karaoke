@@ -86,7 +86,7 @@ app.post("/api/queue", async (req, res) => {
 	} catch (err) {
 		console.error("Error in POST /api/queue:", err);
 		if (err.message === "Video cannot be embedded") {
-			res.status(400).json({ error: "This video cannot be embedded. Please choose a different video." });
+			res.status(400).json({ error: "This video cannot be embedded.\nSome youtube channels like Karafun and SingKing do not allow embedding.\nTry to find your song on a different channel." });
 		} else {
 			res.status(500).json({ error: "Failed to fetch video info" });
 		}
