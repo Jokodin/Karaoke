@@ -81,8 +81,6 @@
         padding: 20px;
         overflow-y: auto;
         border-left: 2px solid #ccc;
-        display: flex;
-        flex-direction: column;
       }
 
       .queue-item {
@@ -94,16 +92,20 @@
       }
 
       #qr-section {
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 2px solid #ccc;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
         text-align: center;
+        z-index: 999;
       }
 
       #qr-section h3 {
         margin: 0 0 10px 0;
         color: #333;
         font-size: 16px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 5px 10px;
+        border-radius: 4px;
       }
 
       #qr-code {
@@ -177,11 +179,11 @@
     <div id="queue-section">
       <h2>Queue</h2>
       <div id="queue-list"></div>
-      <div id="qr-section">
-        <h3>Add Songs</h3>
-        <div id="qr-code">
-          <canvas id="qr-canvas"></canvas>
-        </div>
+    </div>
+    <div id="qr-section">
+      <h3>Add Songs</h3>
+      <div id="qr-code">
+        <canvas id="qr-canvas"></canvas>
       </div>
     </div>
     <div id="error-message">
