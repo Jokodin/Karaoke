@@ -39,7 +39,7 @@ function extractVideoId(url) {
 }
 
 async function getVideoTitle(videoId) {
-	const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,status&id=${videoId}&key=${YOUTUBE_API_KEY}`;
+	const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,status,contentDetails&id=${videoId}&key=${YOUTUBE_API_KEY}`;
 	const res = await fetch(apiUrl);
 	const data = await res.json();
 
@@ -48,8 +48,20 @@ async function getVideoTitle(videoId) {
 	}
 
 	const video = data.items[0];
+
+	// Check various embedding restrictions
 	if (!video.status.embeddable) {
 		throw new Error("Video cannot be embedded");
+	}
+
+	// Check if video is age restricted
+	if (video.contentDetails?.contentRating?.ytRating === "ytAgeRestricted") {
+		throw new Error("Age-restricted videos cannot be embedded");
+	}
+
+	// Check if video is private or deleted
+	if (video.status.privacyStatus === "private") {
+		throw new Error("Private videos cannot be embedded");
 	}
 
 	return video.snippet.title || "Unknown Title";
@@ -62,7 +74,10 @@ app.post("/api/queue", async (req, res) => {
 	const videoId = extractVideoId(url);
 	if (!videoId) {
 		console.log("Invalid video ID extracted from URL");
-		return res.status(400).json({ error: "Invalid YouTube URL" });
+		return res.status(400).json({
+			error: "Invalid YouTube URL",
+			details: "Please make sure you're using a valid YouTube video URL"
+		});
 	}
 	console.log("Extracted video ID:", videoId);
 
@@ -70,7 +85,10 @@ app.post("/api/queue", async (req, res) => {
 		// Check for duplicate video ID
 		if (queue.some(video => extractVideoId(video.url) === videoId)) {
 			console.log("Duplicate video detected");
-			return res.status(400).json({ error: "This video is already in the queue" });
+			return res.status(400).json({
+				error: "This video is already in the queue",
+				details: "The same video has already been added to the queue"
+			});
 		}
 
 		const title = await getVideoTitle(videoId);
@@ -85,10 +103,37 @@ app.post("/api/queue", async (req, res) => {
 		res.status(200).json({ success: true });
 	} catch (err) {
 		console.error("Error in POST /api/queue:", err);
+
 		if (err.message === "Video cannot be embedded") {
-			res.status(400).json({ error: "This video cannot be embedded.\nSome youtube channels like Karafun and SingKing do not allow embedding.\nTry to find your song on a different channel." });
+			res.status(400).json({
+				error: "This video cannot be embedded",
+				details: "Some YouTube channels like Karafun and SingKing do not allow embedding. Try to find your song on a different channel.",
+				type: "embedding"
+			});
+		} else if (err.message === "Age-restricted videos cannot be embedded") {
+			res.status(400).json({
+				error: "Age-restricted video cannot be embedded",
+				details: "This video has age restrictions that prevent it from being embedded in external players.",
+				type: "age-restricted"
+			});
+		} else if (err.message === "Private videos cannot be embedded") {
+			res.status(400).json({
+				error: "Private video cannot be embedded",
+				details: "This video is private and cannot be accessed or embedded.",
+				type: "private"
+			});
+		} else if (err.message === "Video not found") {
+			res.status(400).json({
+				error: "Video not found",
+				details: "The video may have been deleted, made private, or the URL is incorrect.",
+				type: "not-found"
+			});
 		} else {
-			res.status(500).json({ error: "Failed to fetch video info" });
+			res.status(500).json({
+				error: "Failed to fetch video info",
+				details: "There was an error processing your request. Please try again.",
+				type: "server-error"
+			});
 		}
 	}
 });

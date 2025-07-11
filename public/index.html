@@ -11,27 +11,148 @@
         flex-direction: column;
         align-items: center;
         margin-top: 50px;
+        background-color: #f5f5f5;
       }
+
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        width: 100%;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 30px;
+        text-align: center;
+      }
+
+      #youtube-url {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+        margin-bottom: 15px;
+        box-sizing: border-box;
+      }
+
+      #youtube-url:focus {
+        outline: none;
+        border-color: #ff0000;
+      }
+
+      #submit-btn {
+        width: 100%;
+        padding: 12px;
+        background-color: #ff0000;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      #submit-btn:hover {
+        background-color: #cc0000;
+      }
+
+      #submit-btn:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+
       #confirmation {
-        color: green;
+        color: #28a745;
         font-weight: bold;
         margin-top: 20px;
+        padding: 15px;
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 5px;
+        text-align: center;
+        display: none;
       }
+
       .error {
-        color: red;
         margin-top: 20px;
         white-space: pre-line;
         text-align: center;
         width: 100%;
+        display: none;
+        padding: 15px;
+        border-radius: 5px;
+        font-weight: 500;
+      }
+
+      .error.embedding-error {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+      }
+
+      .error.general-error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+
+      .error-icon {
+        font-size: 24px;
+        margin-right: 10px;
+        vertical-align: middle;
+      }
+
+      .error-content {
+        display: flex;
+        align-items: flex-start;
+        text-align: left;
+      }
+
+      .error-message {
+        flex: 1;
+      }
+
+      .error-title {
+        font-weight: bold;
+        margin-bottom: 8px;
+        font-size: 16px;
+      }
+
+      .error-description {
+        margin-bottom: 10px;
+        line-height: 1.4;
+      }
+
+      .error-suggestions {
+        background-color: rgba(255, 255, 255, 0.7);
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 14px;
+        margin-top: 10px;
+      }
+
+      .suggestion-list {
+        margin: 5px 0 0 0;
+        padding-left: 20px;
+      }
+
+      .suggestion-list li {
+        margin-bottom: 3px;
       }
     </style>
   </head>
   <body>
-    <h1>Add to Karaoke Queue</h1>
-    <input id="youtube-url" type="text" placeholder="Paste YouTube link here" size="50" />
-    <button id="submit-btn">Add to Queue</button>
-    <p id="confirmation" style="display: none">Video successfully added to queue!</p>
-    <p id="error" class="error" style="display: none"></p>
+    <div class="container">
+      <h1>Add to Karaoke Queue</h1>
+      <input id="youtube-url" type="text" placeholder="Paste YouTube link here" />
+      <button id="submit-btn">Add to Queue</button>
+      <p id="confirmation">✅ Video successfully added to queue!</p>
+      <div id="error" class="error"></div>
+    </div>
 
     <script>
       const submitBtn = document.getElementById("submit-btn");
@@ -42,16 +163,20 @@
       submitBtn.onclick = async () => {
         const url = urlInput.value.trim();
         if (!url) {
-          showError("Please enter a YouTube URL");
+          showError("Please enter a YouTube URL", "general");
           return;
         }
 
         // Basic YouTube URL validation
         const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
         if (!youtubeRegex.test(url)) {
-          showError("Please enter a valid YouTube URL");
+          showError("Please enter a valid YouTube URL", "general");
           return;
         }
+
+        // Disable button and show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Adding...";
 
         try {
           const response = await fetch("/api/queue", {
@@ -64,26 +189,141 @@
 
           if (!response.ok) {
             const data = await response.json();
-            throw new Error(data.error || "Failed to add video");
+            const errorType = data.type || (data.error && data.error.includes("cannot be embedded") ? "embedding" : "general");
+            const errorMessage = data.details || data.error || "Failed to add video";
+            throw new Error(errorMessage);
           }
 
           // Show success message
           urlInput.value = "";
           confirmation.style.display = "block";
+          error.style.display = "none";
           setTimeout(() => {
             confirmation.style.display = "none";
           }, 3000);
         } catch (err) {
-          showError(err.message);
+          const errorType = err.message.includes("cannot be embedded")
+            ? "embedding"
+            : err.message.includes("Age-restricted")
+            ? "age-restricted"
+            : err.message.includes("Private")
+            ? "private"
+            : err.message.includes("not found")
+            ? "not-found"
+            : "general";
+          showError(err.message, errorType);
+        } finally {
+          // Re-enable button
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Add to Queue";
         }
       };
 
-      function showError(message) {
-        error.textContent = message;
+      // Allow Enter key to submit
+      urlInput.addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+          submitBtn.click();
+        }
+      });
+
+      function showError(message, type = "general") {
+        error.className = `error ${type}-error`;
+
+        if (type === "embedding") {
+          error.innerHTML = `
+            <div class="error-content">
+              <span class="error-icon">⚠️</span>
+              <div class="error-message">
+                <div class="error-title">Embedding Not Allowed</div>
+                <div class="error-description">This video cannot be embedded in the karaoke player.</div>
+                <div class="error-suggestions">
+                  <strong>Why this happens:</strong>
+                  <ul class="suggestion-list">
+                    <li>Some channels (like Karafun, SingKing) disable embedding</li>
+                    <li>Copyright restrictions on the video</li>
+                    <li>Video is age-restricted or private</li>
+                  </ul>
+                  <strong>Try these solutions:</strong>
+                  <ul class="suggestion-list">
+                    <li>Search for the same song on a different channel</li>
+                    <li>Look for official music videos or karaoke versions</li>
+                    <li>Check if the video is available on other platforms</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (type === "age-restricted") {
+          error.innerHTML = `
+            <div class="error-content">
+              <span class="error-icon">🔞</span>
+              <div class="error-message">
+                <div class="error-title">Age-Restricted Video</div>
+                <div class="error-description">This video has age restrictions that prevent embedding.</div>
+                <div class="error-suggestions">
+                  <strong>Solution:</strong>
+                  <ul class="suggestion-list">
+                    <li>Look for a non-age-restricted version of the same song</li>
+                    <li>Try searching for "karaoke" or "instrumental" versions</li>
+                    <li>Check if there's a clean/radio edit available</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (type === "private") {
+          error.innerHTML = `
+            <div class="error-content">
+              <span class="error-icon">🔒</span>
+              <div class="error-message">
+                <div class="error-title">Private Video</div>
+                <div class="error-description">This video is private and cannot be accessed.</div>
+                <div class="error-suggestions">
+                  <strong>Solution:</strong>
+                  <ul class="suggestion-list">
+                    <li>Find a public version of the same song</li>
+                    <li>Search for alternative uploads of this track</li>
+                    <li>Check if the video has been made public since you last saw it</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (type === "not-found") {
+          error.innerHTML = `
+            <div class="error-content">
+              <span class="error-icon">❓</span>
+              <div class="error-message">
+                <div class="error-title">Video Not Found</div>
+                <div class="error-description">The video may have been deleted or the URL is incorrect.</div>
+                <div class="error-suggestions">
+                  <strong>Possible reasons:</strong>
+                  <ul class="suggestion-list">
+                    <li>The video has been deleted by the uploader</li>
+                    <li>The video URL is incorrect or incomplete</li>
+                    <li>The video has been made private</li>
+                    <li>YouTube has removed the video for policy violations</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          error.innerHTML = `
+            <div class="error-content">
+              <span class="error-icon">❌</span>
+              <div class="error-message">
+                <div class="error-title">Error</div>
+                <div class="error-description">${message}</div>
+              </div>
+            </div>
+          `;
+        }
+
         error.style.display = "block";
         setTimeout(() => {
           error.style.display = "none";
-        }, 8000);
+        }, 12000); // Show for 12 seconds for embedding errors
       }
     </script>
   </body>
