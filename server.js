@@ -13,8 +13,12 @@ app.use(cors());
 app.use(express.json());
 
 const QUEUE_FILE = path.join(process.cwd(), "queue.json");
+const SETTINGS_FILE = path.join(process.cwd(), "settings.json");
 
 let queue = [];
+let settings = { allowDuplicates: false }; // Default to false
+
+// Load queue
 if (fs.existsSync(QUEUE_FILE)) {
 	try {
 		const data = JSON.parse(fs.readFileSync(QUEUE_FILE));
@@ -30,6 +34,20 @@ if (fs.existsSync(QUEUE_FILE)) {
 	// Create a fresh file
 	fs.writeFileSync(QUEUE_FILE, JSON.stringify([]));
 	console.log("✅ Created new queue.json");
+}
+
+// Load settings
+if (fs.existsSync(SETTINGS_FILE)) {
+	try {
+		const data = JSON.parse(fs.readFileSync(SETTINGS_FILE));
+		settings = { ...settings, ...data };
+	} catch (err) {
+		console.error("⚠ Failed to parse settings.json. Using defaults.");
+	}
+} else {
+	// Create a fresh settings file
+	fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+	console.log("✅ Created new settings.json");
 }
 
 
@@ -85,10 +103,13 @@ app.post("/api/queue", async (req, res) => {
 		// Check for duplicate video ID
 		if (queue.some(video => extractVideoId(video.url) === videoId)) {
 			console.log("Duplicate video detected");
-			return res.status(400).json({
-				error: "This video is already in the queue",
-				details: "The same video has already been added to the queue"
-			});
+			if (!settings.allowDuplicates) {
+				return res.status(400).json({
+					error: "This video is already in the queue",
+					details: "The same video has already been added to the queue. Duplicates are not allowed.",
+					type: "duplicate"
+				});
+			}
 		}
 
 		const title = await getVideoTitle(videoId);
@@ -141,6 +162,28 @@ app.post("/api/queue", async (req, res) => {
 app.get("/api/queue", (req, res) => {
 	console.log("GET /api/queue - Current queue:", queue);
 	res.json(queue);
+});
+
+app.get("/api/duplicate-setting", (req, res) => {
+	console.log("GET /api/duplicate-setting - Current setting:", settings.allowDuplicates);
+	res.json({ allowDuplicates: settings.allowDuplicates });
+});
+
+app.post("/api/duplicate-setting", (req, res) => {
+	const { allowDuplicates } = req.body;
+
+	if (typeof allowDuplicates !== "boolean") {
+		return res.status(400).json({
+			error: "Invalid setting value",
+			details: "allowDuplicates must be a boolean value"
+		});
+	}
+
+	settings.allowDuplicates = allowDuplicates;
+	fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+
+	console.log("POST /api/duplicate-setting - Updated setting:", settings.allowDuplicates);
+	res.json({ success: true, allowDuplicates: settings.allowDuplicates });
 });
 
 app.delete("/api/queue", (req, res) => {

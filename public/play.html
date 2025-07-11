@@ -47,6 +47,34 @@
         background-color: #cc0000;
       }
 
+      #duplicate-toggle {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: 10px;
+      }
+
+      #duplicate-toggle:hover {
+        background-color: #45a049;
+      }
+
+      #duplicate-toggle.disabled {
+        background-color: #f44336;
+      }
+
+      #duplicate-toggle.disabled:hover {
+        background-color: #da190b;
+      }
+
+      .toggle-label {
+        font-size: 12px;
+        margin-top: 5px;
+        color: #666;
+      }
+
       #queue-section {
         flex: 1;
         background: #f4f4f4;
@@ -102,6 +130,25 @@
       #error-message a:hover {
         text-decoration: underline;
       }
+
+      #queue-error {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 193, 7, 0.95);
+        color: #856404;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        display: none;
+        z-index: 1001;
+        max-width: 300px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      #queue-error.show {
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -111,6 +158,8 @@
         <button id="prev">Previous</button>
         <button id="next">Next</button>
         <button id="clear-queue">Clear Queue</button>
+        <button id="duplicate-toggle">Allow Duplicates</button>
+        <div class="toggle-label">Click to toggle duplicate video allowance</div>
       </div>
     </div>
     <div id="queue-section">
@@ -123,15 +172,54 @@
       <p>You can watch it on YouTube instead:</p>
       <a id="youtube-link" href="#" target="_blank">Open on YouTube</a>
     </div>
+    <div id="queue-error">
+      <strong>Queue Error</strong>
+      <p id="queue-error-text"></p>
+    </div>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
       let queue = [];
       let currentIndex = 0;
       let player;
+      let allowDuplicates = false; // Default to false (no duplicates)
 
       // Called by YouTube API when ready
       function onYouTubeIframeAPIReady() {
         loadQueueAndInitPlayer();
+        loadDuplicateSetting();
+      }
+
+      async function loadDuplicateSetting() {
+        try {
+          const response = await fetch("/api/duplicate-setting");
+          const data = await response.json();
+          allowDuplicates = data.allowDuplicates;
+          updateDuplicateToggleUI();
+        } catch (err) {
+          console.error("Failed to load duplicate setting:", err);
+        }
+      }
+
+      function updateDuplicateToggleUI() {
+        const toggleBtn = document.getElementById("duplicate-toggle");
+        if (allowDuplicates) {
+          toggleBtn.textContent = "Disallow Duplicates";
+          toggleBtn.classList.remove("disabled");
+        } else {
+          toggleBtn.textContent = "Allow Duplicates";
+          toggleBtn.classList.add("disabled");
+        }
+      }
+
+      function showQueueError(message, duration = 5000) {
+        const errorElement = document.getElementById("queue-error");
+        const errorText = document.getElementById("queue-error-text");
+        errorText.textContent = message;
+        errorElement.classList.add("show");
+
+        setTimeout(() => {
+          errorElement.classList.remove("show");
+        }, duration);
       }
 
       async function loadQueueAndInitPlayer() {
@@ -264,6 +352,30 @@
         } catch (err) {
           console.error("Failed to clear queue:", err);
           alert("Failed to clear queue. Please try again.");
+        }
+      };
+
+      document.getElementById("duplicate-toggle").onclick = async () => {
+        const newAllowDuplicates = !allowDuplicates;
+        try {
+          const response = await fetch("/api/duplicate-setting", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ allowDuplicates: newAllowDuplicates }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to update duplicate setting");
+          }
+
+          allowDuplicates = newAllowDuplicates;
+          updateDuplicateToggleUI();
+          showQueueError(`Duplicate videos are now ${newAllowDuplicates ? "allowed" : "disallowed"}`, 3000);
+        } catch (err) {
+          console.error("Failed to update duplicate setting:", err);
+          showQueueError("Failed to update duplicate setting. Please try again.", 5000);
         }
       };
 
