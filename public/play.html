@@ -198,10 +198,14 @@
     </div>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
+      // Add cache-busting timestamp
+      const CACHE_BUSTER = Date.now();
+
       let queue = [];
       let currentIndex = 0;
       let player;
       let allowDuplicates = false; // Default to false (no duplicates)
+      let queueLoaded = false; // Track if queue has been loaded
 
       // Called by YouTube API when ready
       function onYouTubeIframeAPIReady() {
@@ -211,7 +215,7 @@
 
       async function loadDuplicateSetting() {
         try {
-          const response = await fetch("/api/duplicate-setting");
+          const response = await fetch(`/api/duplicate-setting?t=${CACHE_BUSTER}`);
           const data = await response.json();
           allowDuplicates = data.allowDuplicates;
           updateDuplicateToggleUI();
@@ -244,11 +248,25 @@
 
       async function loadQueueAndInitPlayer() {
         try {
-          const response = await fetch("/api/queue");
+          const response = await fetch(`/api/queue?t=${CACHE_BUSTER}`);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
           queue = await response.json();
-          if (!Array.isArray(queue) || queue.length === 0) return;
+          queueLoaded = true;
+
+          if (!Array.isArray(queue) || queue.length === 0) {
+            console.log("Queue is empty");
+            return;
+          }
 
           const videoId = extractVideoId(queue[currentIndex].url);
+          if (!videoId) {
+            console.error("Invalid video ID for current index:", currentIndex);
+            return;
+          }
+
           player = new YT.Player("player", {
             height: "100%",
             width: "100%",
@@ -266,6 +284,15 @@
           });
         } catch (err) {
           console.error("Failed to load queue:", err);
+          showQueueError("Failed to load queue. Please refresh the page.", 8000);
+
+          // Retry after 3 seconds
+          setTimeout(() => {
+            if (!queueLoaded) {
+              console.log("Retrying queue load...");
+              loadQueueAndInitPlayer();
+            }
+          }, 3000);
         }
       }
 
@@ -294,9 +321,17 @@
 
       async function refreshQueueAndPlay(indexChange = 0) {
         try {
-          const response = await fetch("/api/queue");
+          const response = await fetch(`/api/queue?t=${CACHE_BUSTER}`);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
           const updatedQueue = await response.json();
-          if (!Array.isArray(updatedQueue) || updatedQueue.length === 0) return;
+          if (!Array.isArray(updatedQueue) || updatedQueue.length === 0) {
+            queue = [];
+            renderQueue();
+            return;
+          }
 
           // Only update if queue has changed or we're changing index
           const queueChanged = JSON.stringify(queue) !== JSON.stringify(updatedQueue);
@@ -310,12 +345,18 @@
           // 2. The current video is no longer in the queue
           if (indexChange !== 0 || !queue[currentIndex]) {
             currentIndex = Math.max(0, Math.min(currentIndex + indexChange, queue.length - 1));
-            player.loadVideoById(extractVideoId(queue[currentIndex].url));
+            if (queue[currentIndex]) {
+              const videoId = extractVideoId(queue[currentIndex].url);
+              if (videoId) {
+                player.loadVideoById(videoId);
+              }
+            }
             // Hide error message when changing videos
             document.getElementById("error-message").style.display = "none";
           }
         } catch (err) {
           console.error("Failed to refresh queue:", err);
+          showQueueError("Failed to refresh queue. Please refresh the page.", 5000);
         }
       }
 
@@ -404,6 +445,26 @@
 
       // Poll for queue updates every 5 seconds, but don't reload current video
       setInterval(() => refreshQueueAndPlay(0), 5000);
+
+      // Fallback: If YouTube API doesn't load within 5 seconds, try to load queue anyway
+      setTimeout(() => {
+        if (!queueLoaded) {
+          console.log("YouTube API timeout, loading queue directly...");
+          loadQueueAndInitPlayer();
+        }
+      }, 5000);
+
+      // Also try to load queue on page load
+      window.addEventListener("load", () => {
+        if (!queueLoaded) {
+          console.log("Page loaded, attempting to load queue...");
+          setTimeout(() => {
+            if (!queueLoaded) {
+              loadQueueAndInitPlayer();
+            }
+          }, 1000);
+        }
+      });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>

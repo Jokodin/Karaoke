@@ -12,6 +12,17 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 app.use(cors());
 app.use(express.json());
 
+// Add cache-busting headers for static files
+app.use((req, res, next) => {
+	// Prevent caching for HTML files and API endpoints
+	if (req.path.endsWith('.html') || req.path.startsWith('/api/')) {
+		res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+		res.setHeader('Pragma', 'no-cache');
+		res.setHeader('Expires', '0');
+	}
+	next();
+});
+
 const QUEUE_FILE = path.join(process.cwd(), "queue.json");
 const SETTINGS_FILE = path.join(process.cwd(), "settings.json");
 
