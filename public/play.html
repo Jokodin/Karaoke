@@ -133,10 +133,12 @@
         text-align: center;
         display: none;
         z-index: 1000;
-        max-width: 90vw;
-        max-height: 80vh;
+        max-width: calc(90vw - 40px);
+        max-height: calc(80vh - 40px);
         overflow-y: auto;
         word-wrap: break-word;
+        margin: 20px;
+        box-sizing: border-box;
       }
 
       #error-message h3 {
@@ -176,11 +178,13 @@
         text-align: center;
         display: none;
         z-index: 1001;
-        max-width: 300px;
+        max-width: calc(300px - 40px);
         max-height: 200px;
         overflow-y: auto;
         word-wrap: break-word;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+        margin: 10px;
       }
 
       #queue-error strong {
@@ -202,8 +206,8 @@
       /* Responsive design for smaller screens */
       @media (max-width: 768px) {
         #error-message {
-          max-width: 95vw;
-          max-height: 70vh;
+          max-width: calc(95vw - 20px);
+          max-height: calc(70vh - 20px);
           padding: 15px;
           margin: 10px;
         }
@@ -217,10 +221,11 @@
         }
 
         #queue-error {
-          max-width: 250px;
+          max-width: calc(250px - 20px);
           right: 10px;
           top: 10px;
           padding: 12px;
+          margin: 5px;
         }
 
         #queue-error strong {
@@ -241,7 +246,6 @@
         <button id="next">Next</button>
         <button id="clear-queue">Clear Queue</button>
         <button id="duplicate-toggle">Allow Duplicates</button>
-        <div class="toggle-label">Click to toggle duplicate video allowance</div>
       </div>
     </div>
     <div id="queue-section">
