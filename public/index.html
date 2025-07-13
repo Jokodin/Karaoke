@@ -167,7 +167,7 @@
       <input id="youtube-url" type="text" placeholder="Paste YouTube link here" />
       <button id="submit-btn">Add to Queue</button>
       <p id="confirmation">✅ Video successfully added to queue!</p>
-      <div id="error" class="error"></div>
+      <p id="error" class="error" style="display: none"></p>
     </div>
 
     <script>
@@ -190,6 +190,9 @@
           return;
         }
 
+        // Hide error before making request
+        hideError();
+
         // Disable button and show loading state
         submitBtn.disabled = true;
         submitBtn.textContent = "Adding...";
@@ -205,15 +208,15 @@
 
           if (!response.ok) {
             const data = await response.json();
-            const errorType = data.type || (data.error && data.error.includes("cannot be embedded") ? "embedding" : "general");
-            const errorMessage = data.details || data.error || "Failed to add video";
+            const errorType = data.error && data.error.includes("cannot be embedded") ? "embedding" : "general";
+            const errorMessage = data.error || "Failed to add video";
             throw new Error(errorMessage);
           }
 
           // Show success message
           urlInput.value = "";
           confirmation.style.display = "block";
-          error.style.display = "none";
+          hideError();
           setTimeout(() => {
             confirmation.style.display = "none";
           }, 3000);
@@ -243,103 +246,16 @@
       });
 
       function showError(message, type = "general") {
-        error.className = `error ${type}-error`;
-
-        if (type === "embedding") {
-          error.innerHTML = `
-            <div class="error-content">
-              <span class="error-icon">⚠️</span>
-              <div class="error-message">
-                <div class="error-title">Embedding Not Allowed</div>
-                <div class="error-description">This video cannot be embedded in the karaoke player.</div>
-                <div class="error-suggestions">
-                  <strong>Why this happens:</strong>
-                  <ul class="suggestion-list">
-                    <li>Some channels (like Karafun, SingKing) disable embedding</li>
-                    <li>Copyright restrictions on the video</li>
-                    <li>Video is age-restricted or private</li>
-                  </ul>
-                  <strong>Try these solutions:</strong>
-                  <ul class="suggestion-list">
-                    <li>Search for the same song on a different channel</li>
-                    <li>Look for official music videos or karaoke versions</li>
-                    <li>Check if the video is available on other platforms</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          `;
-        } else if (type === "age-restricted") {
-          error.innerHTML = `
-            <div class="error-content">
-              <span class="error-icon">🔞</span>
-              <div class="error-message">
-                <div class="error-title">Age-Restricted Video</div>
-                <div class="error-description">This video has age restrictions that prevent embedding.</div>
-                <div class="error-suggestions">
-                  <strong>Solution:</strong>
-                  <ul class="suggestion-list">
-                    <li>Look for a non-age-restricted version of the same song</li>
-                    <li>Try searching for "karaoke" or "instrumental" versions</li>
-                    <li>Check if there's a clean/radio edit available</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          `;
-        } else if (type === "private") {
-          error.innerHTML = `
-            <div class="error-content">
-              <span class="error-icon">🔒</span>
-              <div class="error-message">
-                <div class="error-title">Private Video</div>
-                <div class="error-description">This video is private and cannot be accessed.</div>
-                <div class="error-suggestions">
-                  <strong>Solution:</strong>
-                  <ul class="suggestion-list">
-                    <li>Find a public version of the same song</li>
-                    <li>Search for alternative uploads of this track</li>
-                    <li>Check if the video has been made public since you last saw it</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          `;
-        } else if (type === "not-found") {
-          error.innerHTML = `
-            <div class="error-content">
-              <span class="error-icon">❓</span>
-              <div class="error-message">
-                <div class="error-title">Video Not Found</div>
-                <div class="error-description">The video may have been deleted or the URL is incorrect.</div>
-                <div class="error-suggestions">
-                  <strong>Possible reasons:</strong>
-                  <ul class="suggestion-list">
-                    <li>The video has been deleted by the uploader</li>
-                    <li>The video URL is incorrect or incomplete</li>
-                    <li>The video has been made private</li>
-                    <li>YouTube has removed the video for policy violations</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          `;
-        } else {
-          error.innerHTML = `
-            <div class="error-content">
-              <span class="error-icon">❌</span>
-              <div class="error-message">
-                <div class="error-title">Error</div>
-                <div class="error-description">${message}</div>
-              </div>
-            </div>
-          `;
-        }
-
+        error.textContent = message;
         error.style.display = "block";
         setTimeout(() => {
-          error.style.display = "none";
-        }, 12000); // Show for 12 seconds for embedding errors
+          hideError();
+        }, 8000);
+      }
+
+      function hideError() {
+        error.textContent = "";
+        error.style.display = "none";
       }
     </script>
   </body>
