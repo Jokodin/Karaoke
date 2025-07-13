@@ -246,7 +246,19 @@
       });
 
       function showError(message, type = "general") {
-        error.textContent = message;
+        if (type === "embedding" || message.includes("cannot be embedded")) {
+          error.innerHTML = `
+            <div class="error-content">
+              <span class="error-icon">⚠️</span>
+              <div class="error-message">
+                <div class="error-title">Embedding Not Allowed</div>
+                <div class="error-description">Some YouTube channels like Karafun and SingKing do not allow embedding.<br>Try to find your song on a different channel.</div>
+              </div>
+            </div>
+          `;
+        } else {
+          error.textContent = message;
+        }
         error.style.display = "block";
         setTimeout(() => {
           hideError();
