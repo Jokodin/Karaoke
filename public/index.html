@@ -159,15 +159,50 @@
       .suggestion-list li {
         margin-bottom: 3px;
       }
+
+      #queue-section {
+        margin-top: 30px;
+        width: 100%;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+        background: #fafafa;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        padding: 18px 20px 10px 20px;
+      }
+      #queue-section h2 {
+        font-size: 20px;
+        margin: 0 0 10px 0;
+        color: #333;
+      }
+      #queue-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      #queue-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 16px;
+        color: #222;
+      }
+      #queue-list li:last-child {
+        border-bottom: none;
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <h1>Add to Karaoke Queue</h1>
-      <input id="youtube-url" type="text" placeholder="Paste YouTube link here" />
+      <input id="youtube-url" type="text" placeholder="Paste YouTube link here" size="50" />
       <button id="submit-btn">Add to Queue</button>
       <p id="confirmation">✅ Video successfully added to queue!</p>
       <p id="error" class="error" style="display: none"></p>
+      <div id="queue-section">
+        <h2>Current Queue</h2>
+        <ul id="queue-list"></ul>
+      </div>
     </div>
 
     <script>
@@ -175,6 +210,28 @@
       const urlInput = document.getElementById("youtube-url");
       const confirmation = document.getElementById("confirmation");
       const error = document.getElementById("error");
+
+      async function fetchAndRenderQueue() {
+        try {
+          const response = await fetch("/api/queue");
+          const queue = await response.json();
+          const queueList = document.getElementById("queue-list");
+          queueList.innerHTML = "";
+          if (Array.isArray(queue) && queue.length > 0) {
+            queue.forEach((item, idx) => {
+              const li = document.createElement("li");
+              li.textContent = `${item.title || item.url}`;
+              queueList.appendChild(li);
+            });
+          } else {
+            queueList.innerHTML = '<li style="color:#888;font-style:italic;">Queue is empty</li>';
+          }
+        } catch (err) {
+          // Optionally show an error
+        }
+      }
+      // Call on page load
+      fetchAndRenderQueue();
 
       submitBtn.onclick = async () => {
         const url = urlInput.value.trim();
@@ -220,6 +277,7 @@
           setTimeout(() => {
             confirmation.style.display = "none";
           }, 3000);
+          await fetchAndRenderQueue();
         } catch (err) {
           const errorType = err.message.includes("cannot be embedded")
             ? "embedding"
