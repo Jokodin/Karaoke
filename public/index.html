@@ -209,6 +209,11 @@
     </div>
 
     <script>
+      // Determine API base URL based on hostname
+      const API_BASE_URL = window.location.hostname === 'jokodin.github.io' 
+        ? 'https://karajokey.up.railway.app' 
+        : '';
+
       const submitBtn = document.getElementById("submit-btn");
       const urlInput = document.getElementById("youtube-url");
       const confirmation = document.getElementById("confirmation");
@@ -216,7 +221,7 @@
 
       async function fetchAndRenderQueue() {
         try {
-          const response = await fetch("/api/queue");
+          const response = await fetch(`${API_BASE_URL}/api/queue`);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
@@ -271,7 +276,7 @@
         submitBtn.textContent = "Adding...";
 
         try {
-          const response = await fetch("/api/queue", {
+          const response = await fetch(`${API_BASE_URL}/api/queue`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

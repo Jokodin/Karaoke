@@ -313,6 +313,11 @@
     </div>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
+      // Determine API base URL based on hostname
+      const API_BASE_URL = window.location.hostname === 'jokodin.github.io' 
+        ? 'https://karajokey.up.railway.app' 
+        : '';
+      
       // Add cache-busting timestamp
       const CACHE_BUSTER = Date.now();
 
@@ -331,7 +336,7 @@
 
       async function loadDuplicateSetting() {
         try {
-          const response = await fetch(`/api/duplicate-setting?t=${CACHE_BUSTER}`);
+          const response = await fetch(`${API_BASE_URL}/api/duplicate-setting?t=${CACHE_BUSTER}`);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
@@ -374,7 +379,7 @@
 
       async function loadQueueAndInitPlayer() {
         try {
-          const response = await fetch(`/api/queue?t=${CACHE_BUSTER}`);
+          const response = await fetch(`${API_BASE_URL}/api/queue?t=${CACHE_BUSTER}`);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
@@ -540,7 +545,7 @@
 
       async function refreshQueueAndPlay(indexChange = 0) {
         try {
-          const response = await fetch(`/api/queue?t=${CACHE_BUSTER}`);
+          const response = await fetch(`${API_BASE_URL}/api/queue?t=${CACHE_BUSTER}`);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
@@ -629,7 +634,7 @@
         if (!confirm("Are you sure you want to clear the queue?")) return;
 
         try {
-          const response = await fetch("/api/queue", {
+          const response = await fetch(`${API_BASE_URL}/api/queue`, {
             method: "DELETE",
           });
 
@@ -673,7 +678,7 @@
       document.getElementById("duplicate-toggle").onclick = async () => {
         const newAllowDuplicates = !allowDuplicates;
         try {
-          const response = await fetch("/api/duplicate-setting", {
+          const response = await fetch(`${API_BASE_URL}/api/duplicate-setting`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
