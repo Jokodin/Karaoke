@@ -211,6 +211,30 @@ app.delete("/api/queue", (req, res) => {
 	res.status(200).json({ success: true });
 });
 
+// 404 handler for API routes - must be before static file serving
+app.use("/api/*", (req, res) => {
+	res.status(404).json({
+		error: "API endpoint not found",
+		details: `The endpoint ${req.path} does not exist.`
+	});
+});
+
+// Error handling middleware - must be before static file serving
+app.use((err, req, res, next) => {
+	// Only handle errors for API routes
+	if (req.path.startsWith("/api/")) {
+		console.error("Unhandled error in API route:", err);
+		res.status(500).json({
+			error: "Internal server error",
+			details: "An unexpected error occurred. Please try again.",
+			type: "server-error"
+		});
+	} else {
+		// For non-API routes, pass to next handler
+		next(err);
+	}
+});
+
 // Serve static files for frontends
 app.use(express.static("public"));
 

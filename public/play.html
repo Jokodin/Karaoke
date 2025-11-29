@@ -332,7 +332,17 @@
       async function loadDuplicateSetting() {
         try {
           const response = await fetch(`/api/duplicate-setting?t=${CACHE_BUSTER}`);
-          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          // Check if response is JSON before parsing
+          const contentType = response.headers.get("content-type");
+          let data;
+          if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+          } else {
+            throw new Error("Server returned non-JSON response");
+          }
           allowDuplicates = data.allowDuplicates;
           updateDuplicateToggleUI();
         } catch (err) {
@@ -369,7 +379,15 @@
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
 
-          queue = await response.json();
+          // Check if response is JSON before parsing
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            queue = await response.json();
+          } else {
+            // Response is not JSON, try to parse as text first
+            const text = await response.text();
+            throw new Error("Server returned non-JSON response");
+          }
           queueLoaded = true;
 
           if (!Array.isArray(queue) || queue.length === 0) {
@@ -527,7 +545,16 @@
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
 
-          const updatedQueue = await response.json();
+          // Check if response is JSON before parsing
+          const contentType = response.headers.get("content-type");
+          let updatedQueue;
+          if (contentType && contentType.includes("application/json")) {
+            updatedQueue = await response.json();
+          } else {
+            // Response is not JSON
+            const text = await response.text();
+            throw new Error("Server returned non-JSON response");
+          }
           if (!Array.isArray(updatedQueue) || updatedQueue.length === 0) {
             queue = [];
             renderQueue();
@@ -607,7 +634,14 @@
           });
 
           if (!response.ok) {
-            throw new Error("Failed to clear queue");
+            // Check if response is JSON before parsing
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const data = await response.json();
+              throw new Error(data.error || "Failed to clear queue");
+            } else {
+              throw new Error(`Server error (${response.status}): ${response.statusText}`);
+            }
           }
 
           queue = [];
@@ -648,12 +682,26 @@
           });
 
           if (!response.ok) {
-            throw new Error("Failed to update duplicate setting");
+            // Check if response is JSON before parsing
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const data = await response.json();
+              throw new Error(data.error || "Failed to update duplicate setting");
+            } else {
+              throw new Error(`Server error (${response.status}): ${response.statusText}`);
+            }
           }
 
-          allowDuplicates = newAllowDuplicates;
-          updateDuplicateToggleUI();
-          showQueueError(`Duplicate videos are now ${newAllowDuplicates ? "allowed" : "disallowed"}`, 3000);
+          // Check if response is JSON before parsing
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            allowDuplicates = newAllowDuplicates;
+            updateDuplicateToggleUI();
+            showQueueError(`Duplicate videos are now ${newAllowDuplicates ? "allowed" : "disallowed"}`, 3000);
+          } else {
+            throw new Error("Server returned non-JSON response");
+          }
         } catch (err) {
           console.error("Failed to update duplicate setting:", err);
           showQueueError("Failed to update duplicate setting. Please try again.", 5000);

@@ -217,7 +217,19 @@
       async function fetchAndRenderQueue() {
         try {
           const response = await fetch("/api/queue");
-          const queue = await response.json();
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          // Check if response is JSON before parsing
+          const contentType = response.headers.get("content-type");
+          let queue;
+          if (contentType && contentType.includes("application/json")) {
+            queue = await response.json();
+          } else {
+            // Response is not JSON, try to parse as text first
+            const text = await response.text();
+            throw new Error("Server returned non-JSON response");
+          }
           const queueList = document.getElementById("queue-list");
           queueList.innerHTML = "";
           if (Array.isArray(queue) && queue.length > 0) {
@@ -231,6 +243,7 @@
           }
         } catch (err) {
           // Optionally show an error
+          console.error("Failed to fetch queue:", err);
         }
       }
       // Call on page load
@@ -267,7 +280,16 @@
           });
 
           if (!response.ok) {
-            const data = await response.json();
+            // Check if response is JSON before parsing
+            const contentType = response.headers.get("content-type");
+            let data;
+            if (contentType && contentType.includes("application/json")) {
+              data = await response.json();
+            } else {
+              // Response is not JSON (likely HTML error page from reverse proxy)
+              const text = await response.text();
+              throw new Error(`Server error (${response.status}): ${response.statusText}`);
+            }
             // Only show error for private videos or not found - embedding errors are now allowed
             const errorType = data.type === "private" || data.type === "not-found" ? "general" : "general";
             const errorMessage = data.error || "Failed to add video";
