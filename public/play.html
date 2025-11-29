@@ -11,6 +11,8 @@
         margin: 0;
         height: 100vh;
         overflow: hidden;
+        background-color: #1a1a1a;
+        color: #e0e0e0;
       }
 
       #video-section {
@@ -19,7 +21,32 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
+        background-color: #1a1a1a;
       }
+
+      #external-video-notice {
+        display: none;
+        text-align: center;
+        padding: 40px 20px;
+        background: #2d2d2d;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      #external-video-notice.show {
+        display: block;
+      }
+
+      #external-video-notice h3 {
+        margin: 0 0 10px 0;
+        color: #e0e0e0;
+      }
+
+      #external-video-notice p {
+        margin: 5px 0;
+        color: #b0b0b0;
+      }
+
 
       iframe {
         width: 100%;
@@ -33,13 +60,23 @@
         gap: 10px;
       }
 
-      #clear-queue {
-        background-color: #ff4444;
-        color: white;
+      #controls button {
+        background-color: #3d3d3d;
+        color: #e0e0e0;
         border: none;
         padding: 8px 16px;
         border-radius: 4px;
         cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      #controls button:hover {
+        background-color: #4d4d4d;
+      }
+
+      #clear-queue {
+        background-color: #ff4444;
+        color: white;
         margin-left: auto;
       }
 
@@ -50,10 +87,6 @@
       #duplicate-toggle {
         background-color: #4caf50;
         color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 4px;
-        cursor: pointer;
         margin-left: 10px;
       }
 
@@ -72,23 +105,28 @@
       .toggle-label {
         font-size: 12px;
         margin-top: 5px;
-        color: #666;
+        color: #b0b0b0;
       }
 
       #queue-section {
         flex: 1;
-        background: #f4f4f4;
+        background: #252525;
         padding: 20px;
         overflow-y: auto;
-        border-left: 2px solid #ccc;
+        border-left: 2px solid #444;
+      }
+
+      #queue-section h2 {
+        color: #e0e0e0;
       }
 
       .queue-item {
         margin: 10px 0;
+        color: #e0e0e0;
       }
       .current {
         font-weight: bold;
-        color: green;
+        color: #4ade80;
       }
 
       #qr-section {
@@ -101,19 +139,19 @@
 
       #qr-section h3 {
         margin: 0 0 10px 0;
-        color: #333;
+        color: #e0e0e0;
         font-size: 16px;
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(45, 45, 45, 0.95);
         padding: 5px 10px;
         border-radius: 4px;
       }
 
       #qr-code {
         display: inline-block;
-        background: white;
+        background: #2d2d2d;
         padding: 10px;
-        border: 1px solid #ccc;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        border: 1px solid #555;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         border-radius: 8px;
       }
       #qr-code canvas {
@@ -126,7 +164,7 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.9);
+        background: rgba(0, 0, 0, 0.95);
         color: white;
         padding: 20px;
         border-radius: 8px;
@@ -139,6 +177,7 @@
         word-wrap: break-word;
         margin: 20px;
         box-sizing: border-box;
+        border: 1px solid #444;
       }
 
       #error-message h3 {
@@ -152,7 +191,7 @@
       }
 
       #error-message a {
-        color: #ff0000;
+        color: #ff6b6b;
         text-decoration: none;
         font-weight: bold;
         display: inline-block;
@@ -172,7 +211,7 @@
         top: 20px;
         right: 20px;
         background: rgba(255, 193, 7, 0.95);
-        color: #856404;
+        color: #1a1a1a;
         padding: 15px;
         border-radius: 8px;
         text-align: center;
@@ -182,7 +221,7 @@
         max-height: 200px;
         overflow-y: auto;
         word-wrap: break-word;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         box-sizing: border-box;
         margin: 10px;
       }
@@ -240,6 +279,11 @@
   </head>
   <body>
     <div id="video-section">
+      <div id="external-video-notice">
+        <h3>🎵 Video Playing in New Tab</h3>
+        <p>This video cannot be embedded and is playing in a new YouTube tab.</p>
+        <p>Click "Next" when the song is finished to continue.</p>
+      </div>
       <div id="player"></div>
       <div id="controls">
         <button id="prev">Previous</button>
@@ -253,7 +297,6 @@
       <div id="queue-list"></div>
     </div>
     <div id="qr-section">
-      <h3>Add Songs</h3>
       <div id="qr-code">
         <canvas id="qr-canvas"></canvas>
       </div>
@@ -278,6 +321,7 @@
       let player;
       let allowDuplicates = false; // Default to false (no duplicates)
       let queueLoaded = false; // Track if queue has been loaded
+      let youtubeWindow = null; // Track opened YouTube window
 
       // Called by YouTube API when ready
       function onYouTubeIframeAPIReady() {
@@ -333,27 +377,7 @@
             return;
           }
 
-          const videoId = extractVideoId(queue[currentIndex].url);
-          if (!videoId) {
-            console.error("Invalid video ID for current index:", currentIndex);
-            return;
-          }
-
-          player = new YT.Player("player", {
-            height: "100%",
-            width: "100%",
-            videoId: videoId,
-            playerVars: {
-              autoplay: 1,
-              rel: 0,
-              modestbranding: 1,
-            },
-            events: {
-              onReady: renderQueue,
-              onStateChange: onPlayerStateChange,
-              onError: onPlayerError,
-            },
-          });
+          playCurrentVideo();
         } catch (err) {
           console.error("Failed to load queue:", err);
           showQueueError("Failed to load queue. Please refresh the page.", 8000);
@@ -368,13 +392,106 @@
         }
       }
 
+      function playCurrentVideo() {
+        // Note: We don't close existing YouTube windows - user can close them manually
+
+        if (!queue[currentIndex]) {
+          console.log("No video at current index");
+          return;
+        }
+
+        const currentVideo = queue[currentIndex];
+        const videoId = extractVideoId(currentVideo.url);
+        
+        if (!videoId) {
+          console.error("Invalid video ID for current index:", currentIndex);
+          return;
+        }
+
+        // Check if video is embeddable (default to true for backwards compatibility)
+        const isEmbeddable = currentVideo.embeddable !== false;
+
+        if (isEmbeddable) {
+          // Hide external video notice
+          const notice = document.getElementById("external-video-notice");
+          if (notice) {
+            notice.classList.remove("show");
+          }
+
+          // Show the player div
+          const playerDiv = document.getElementById("player");
+          if (playerDiv) {
+            playerDiv.style.display = "block";
+          }
+
+          // Try to embed the video
+          if (!player) {
+            player = new YT.Player("player", {
+              height: "100%",
+              width: "100%",
+              videoId: videoId,
+              playerVars: {
+                autoplay: 1,
+                rel: 0,
+                modestbranding: 1,
+              },
+              events: {
+                onReady: renderQueue,
+                onStateChange: onPlayerStateChange,
+                onError: onPlayerError,
+              },
+            });
+          } else {
+            player.loadVideoById(videoId);
+          }
+          renderQueue();
+        } else {
+          // Open in new tab and use duration to auto-advance
+          openVideoInNewTab(currentVideo);
+        }
+      }
+
+      function openVideoInNewTab(video) {
+        // Hide the iframe player
+        const playerDiv = document.getElementById("player");
+        if (playerDiv) {
+          playerDiv.style.display = "none";
+        }
+
+        // Show external video notice
+        const notice = document.getElementById("external-video-notice");
+        if (notice) {
+          notice.classList.add("show");
+        }
+
+        // Open YouTube video in a new window/tab
+        const youtubeUrl = video.url.includes("?") 
+          ? `${video.url}&autoplay=1` 
+          : `${video.url}?autoplay=1`;
+        
+        youtubeWindow = window.open(youtubeUrl, "_blank");
+        
+        if (!youtubeWindow) {
+          showQueueError("Popup blocked! Please allow popups for this site.", 5000);
+          if (notice) {
+            notice.classList.remove("show");
+          }
+          if (playerDiv) {
+            playerDiv.style.display = "block";
+          }
+          return;
+        }
+
+        renderQueue();
+        // Note: No auto-advance - user must click "Next" button to continue
+      }
+
       function onPlayerStateChange(event) {
         // When video ends
         if (event.data === YT.PlayerState.ENDED) {
           if (currentIndex < queue.length - 1) {
             currentIndex++;
-            player.loadVideoById(extractVideoId(queue[currentIndex].url));
-            renderQueue();
+            playCurrentVideo();
           }
         }
       }
@@ -384,10 +501,22 @@
         if (event.data === 150 || event.data === 101) {
           // 150: Video cannot be embedded
           // 101: Video is private
-          const errorMessage = document.getElementById("error-message");
-          const youtubeLink = document.getElementById("youtube-link");
-          youtubeLink.href = queue[currentIndex].url;
-          errorMessage.style.display = "block";
+          // Fallback: try opening in new tab
+          const currentVideo = queue[currentIndex];
+          if (currentVideo) {
+            // Mark as non-embeddable and open in new tab
+            currentVideo.embeddable = false;
+            const playerDiv = document.getElementById("player");
+            if (playerDiv) {
+              playerDiv.style.display = "none";
+            }
+            openVideoInNewTab(currentVideo);
+          } else {
+            const errorMessage = document.getElementById("error-message");
+            const youtubeLink = document.getElementById("youtube-link");
+            youtubeLink.href = queue[currentIndex].url;
+            errorMessage.style.display = "block";
+          }
         }
       }
 
@@ -417,14 +546,14 @@
           // 2. The current video is no longer in the queue
           if (indexChange !== 0 || !queue[currentIndex]) {
             currentIndex = Math.max(0, Math.min(currentIndex + indexChange, queue.length - 1));
-            if (queue[currentIndex]) {
-              const videoId = extractVideoId(queue[currentIndex].url);
-              if (videoId) {
-                player.loadVideoById(videoId);
-              }
-            }
+            playCurrentVideo();
             // Hide error message when changing videos
             document.getElementById("error-message").style.display = "none";
+            // Show player div in case it was hidden
+            const playerDiv = document.getElementById("player");
+            if (playerDiv) {
+              playerDiv.style.display = "block";
+            }
           }
         } catch (err) {
           console.error("Failed to refresh queue:", err);
@@ -483,7 +612,23 @@
 
           queue = [];
           currentIndex = 0;
-          player.stopVideo();
+          
+          if (player) {
+            player.stopVideo();
+          }
+          
+          // Show player div
+          const playerDiv = document.getElementById("player");
+          if (playerDiv) {
+            playerDiv.style.display = "block";
+          }
+          
+          // Hide external video notice
+          const notice = document.getElementById("external-video-notice");
+          if (notice) {
+            notice.classList.remove("show");
+          }
+          
           renderQueue();
         } catch (err) {
           console.error("Failed to clear queue:", err);
@@ -543,7 +688,7 @@
       window.addEventListener("DOMContentLoaded", () => {
         const qr = new QRious({
           element: document.getElementById("qr-canvas"),
-          value: "https://web-production-9ab8c.up.railway.app",
+          value: "https://karajokey.up.railway.app",
           size: 100,
         });
       });

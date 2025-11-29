@@ -67,7 +67,7 @@ function extractVideoId(url) {
 	return match ? match[1] : null;
 }
 
-async function getVideoTitle(videoId) {
+async function getVideoInfo(videoId) {
 	const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,status,contentDetails&id=${videoId}&key=${YOUTUBE_API_KEY}`;
 	const res = await fetch(apiUrl);
 	const data = await res.json();
@@ -78,22 +78,35 @@ async function getVideoTitle(videoId) {
 
 	const video = data.items[0];
 
-	// Check various embedding restrictions
-	if (!video.status.embeddable) {
-		throw new Error("Video cannot be embedded");
-	}
-
-	// Check if video is age restricted
-	if (video.contentDetails?.contentRating?.ytRating === "ytAgeRestricted") {
-		throw new Error("Age-restricted videos cannot be embedded");
-	}
-
 	// Check if video is private or deleted
 	if (video.status.privacyStatus === "private") {
 		throw new Error("Private videos cannot be embedded");
 	}
 
-	return video.snippet.title || "Unknown Title";
+	// Parse duration (ISO 8601 format like PT4M13S)
+	const duration = video.contentDetails?.duration || "PT0S";
+	const durationSeconds = parseDuration(duration);
+
+	const isEmbeddable = video.status.embeddable === true;
+	const isAgeRestricted = video.contentDetails?.contentRating?.ytRating === "ytAgeRestricted";
+
+	return {
+		title: video.snippet.title || "Unknown Title",
+		duration: durationSeconds,
+		embeddable: isEmbeddable && !isAgeRestricted
+	};
+}
+
+function parseDuration(duration) {
+	// Parse ISO 8601 duration (e.g., PT4M13S = 4 minutes 13 seconds)
+	const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+	if (!match) return 0;
+
+	const hours = parseInt(match[1] || 0);
+	const minutes = parseInt(match[2] || 0);
+	const seconds = parseInt(match[3] || 0);
+
+	return hours * 3600 + minutes * 60 + seconds;
 }
 
 app.post("/api/queue", async (req, res) => {
@@ -123,10 +136,15 @@ app.post("/api/queue", async (req, res) => {
 			}
 		}
 
-		const title = await getVideoTitle(videoId);
-		console.log("Fetched title:", title);
+		const videoInfo = await getVideoInfo(videoId);
+		console.log("Fetched video info:", videoInfo);
 
-		const video = { url, title };
+		const video = {
+			url,
+			title: videoInfo.title,
+			duration: videoInfo.duration,
+			embeddable: videoInfo.embeddable
+		};
 		queue.push(video);
 		console.log("Current queue length:", queue.length);
 		console.log("Queue contents:", queue);
@@ -136,19 +154,7 @@ app.post("/api/queue", async (req, res) => {
 	} catch (err) {
 		console.error("Error in POST /api/queue:", err);
 
-		if (err.message === "Video cannot be embedded") {
-			res.status(400).json({
-				error: "This video cannot be embedded",
-				details: "Some YouTube channels like Karafun and SingKing do not allow embedding. Try to find your song on a different channel.",
-				type: "embedding"
-			});
-		} else if (err.message === "Age-restricted videos cannot be embedded") {
-			res.status(400).json({
-				error: "Age-restricted video cannot be embedded",
-				details: "This video has age restrictions that prevent it from being embedded in external players.",
-				type: "age-restricted"
-			});
-		} else if (err.message === "Private videos cannot be embedded") {
+		if (err.message === "Private videos cannot be embedded") {
 			res.status(400).json({
 				error: "Private video cannot be embedded",
 				details: "This video is private and cannot be accessed or embedded.",
@@ -171,7 +177,7 @@ app.post("/api/queue", async (req, res) => {
 });
 
 app.get("/api/queue", (req, res) => {
-	console.log("GET /api/queue - Current queue:", queue);
+	// console.log("GET /api/queue - Current queue:", queue);
 	res.json(queue);
 });
 
