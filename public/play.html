@@ -475,6 +475,15 @@
       }
 
       function openVideoInNewTab(video) {
+        // Stop and hide the iframe player if it exists
+        if (player && typeof player.stopVideo === "function") {
+          try {
+            player.stopVideo();
+          } catch (e) {
+            console.warn("Failed to stop YouTube player before opening new tab:", e);
+          }
+        }
+
         // Hide the iframe player
         const playerDiv = document.getElementById("player");
         if (playerDiv) {
@@ -581,11 +590,6 @@
             playCurrentVideo();
             // Hide error message when changing videos
             document.getElementById("error-message").style.display = "none";
-            // Show player div in case it was hidden
-            const playerDiv = document.getElementById("player");
-            if (playerDiv) {
-              playerDiv.style.display = "block";
-            }
           }
         } catch (err) {
           console.error("Failed to refresh queue:", err);
