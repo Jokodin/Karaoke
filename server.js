@@ -211,12 +211,16 @@ app.delete("/api/queue", (req, res) => {
 	res.status(200).json({ success: true });
 });
 
-// 404 handler for API routes - must be before static file serving
-app.use("/api/*", (req, res) => {
-	res.status(404).json({
-		error: "API endpoint not found",
-		details: `The endpoint ${req.path} does not exist.`
-	});
+// 404 handler for unmatched API routes - must be before static file serving
+app.use((req, res, next) => {
+	if (req.path.startsWith("/api/") && !res.headersSent) {
+		res.status(404).json({
+			error: "API endpoint not found",
+			details: `The endpoint ${req.path} does not exist.`
+		});
+	} else {
+		next();
+	}
 });
 
 // Error handling middleware - must be before static file serving
