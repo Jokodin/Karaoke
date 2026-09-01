@@ -124,9 +124,25 @@
         margin: 10px 0;
         color: #e0e0e0;
       }
+      .queue-item.clickable {
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background-color 0.2s, color 0.2s;
+      }
+      .queue-item.clickable:hover {
+        background-color: #3d3d3d;
+        color: #fff;
+      }
       .current {
         font-weight: bold;
         color: #4ade80;
+      }
+      .queue-item.played {
+        color: #555;
+      }
+      .queue-item.played:hover {
+        color: #888;
       }
 
       #qr-section {
@@ -552,7 +568,7 @@
         }
       }
 
-      async function refreshQueueAndPlay(indexChange = 0) {
+      async function refreshQueueAndPlay(indexChange = 0, targetIndex = null) {
         try {
           const response = await fetch(`${API_BASE_URL}/api/queue?t=${CACHE_BUSTER}`);
           if (!response.ok) {
@@ -575,17 +591,21 @@
             return;
           }
 
-          // Only update if queue has changed or we're changing index
-          const queueChanged = JSON.stringify(queue) !== JSON.stringify(updatedQueue);
-
           // Update the queue display regardless
           queue = updatedQueue;
           renderQueue();
 
+          // Jump to a specific song when clicked in the queue
+          if (targetIndex !== null) {
+            if (targetIndex >= 0 && targetIndex < queue.length && targetIndex !== currentIndex) {
+              currentIndex = targetIndex;
+              playCurrentVideo();
+              document.getElementById("error-message").style.display = "none";
+            }
           // Only reload video if:
           // 1. We're explicitly changing index (prev/next buttons)
           // 2. The current video is no longer in the queue
-          if (indexChange !== 0 || !queue[currentIndex]) {
+          } else if (indexChange !== 0 || !queue[currentIndex]) {
             currentIndex = Math.max(0, Math.min(currentIndex + indexChange, queue.length - 1));
             playCurrentVideo();
             // Hide error message when changing videos
@@ -620,8 +640,17 @@
         for (let i = queue.length - 1; i >= 0; i--) {
           const item = queue[i];
           const div = document.createElement("div");
-          div.className = "queue-item" + (i === currentIndex ? " current" : "");
+          const isCurrent = i === currentIndex;
+          const isPlayed = i < currentIndex;
+          div.className =
+            "queue-item" +
+            (isCurrent ? " current" : " clickable") +
+            (isPlayed ? " played" : "");
           div.textContent = item.title;
+          if (!isCurrent) {
+            div.title = "Click to play";
+            div.onclick = () => refreshQueueAndPlay(0, i);
+          }
           list.appendChild(div);
         }
       }
