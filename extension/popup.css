@@ -1,0 +1,181 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  margin: 0;
+  padding: 14px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+html.panel body {
+  width: auto;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+header h1 {
+  font-size: 18px;
+}
+
+#status {
+  margin-top: 4px;
+  color: #b0b0b0;
+  font-size: 12px;
+}
+
+#notice,
+#error {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+
+#notice {
+  background: #2d2d2d;
+  color: #d0d0d0;
+}
+
+#error {
+  background: #3a2020;
+  color: #ffb4b4;
+}
+
+#now {
+  margin-top: 12px;
+}
+
+.label,
+#server label,
+#hint {
+  color: #b0b0b0;
+  font-size: 12px;
+}
+
+#now-title {
+  margin-top: 4px;
+  font-size: 15px;
+}
+
+#transport {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+button {
+  background: #3d3d3d;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #4d4d4d;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+#transport button {
+  flex: 1;
+}
+
+#play {
+  background: #2f6f4e;
+  color: white;
+}
+
+#play:hover:not(:disabled) {
+  background: #39875e;
+}
+
+#clear,
+#popout {
+  width: 100%;
+  margin-top: 8px;
+}
+
+#clear {
+  background: #ff4444;
+  color: white;
+}
+
+#clear:hover:not(:disabled) {
+  background: #cc0000;
+}
+
+section h2 {
+  margin: 14px 0 8px;
+  font-size: 14px;
+}
+
+#queue {
+  max-height: 220px;
+  overflow-y: auto;
+  background: #252525;
+  border-radius: 4px;
+}
+
+.queue-item,
+.empty {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #3a3a3a;
+  background: transparent;
+  border-radius: 0;
+}
+
+.queue-item.current {
+  background: #3d3d3d;
+}
+
+.queue-item.played {
+  color: #8d8d8d;
+}
+
+.empty {
+  color: #8d8d8d;
+  font-style: italic;
+  cursor: default;
+}
+
+#server {
+  margin-top: 14px;
+}
+
+#server-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+#api-base {
+  flex: 1;
+  min-width: 0;
+  background: #111;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+#hint {
+  margin-top: 12px;
+  line-height: 1.4;
+}

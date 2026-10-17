@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Karaoke Queue</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Karaoke Queue</h1>
+      <p id="status"></p>
+    </header>
+
+    <p id="notice" hidden></p>
+    <p id="error" hidden></p>
+
+    <section id="now">
+      <p class="label">Now playing</p>
+      <p id="now-title">Nothing playing yet</p>
+    </section>
+
+    <div id="transport">
+      <button id="prev" type="button">Previous</button>
+      <button id="play" type="button">Play</button>
+      <button id="next" type="button">Next</button>
+    </div>
+    <button id="clear" type="button">Clear queue</button>
+    <button id="popout" type="button">Keep controls open</button>
+
+    <section>
+      <h2>Queue</h2>
+      <div id="queue"></div>
+    </section>
+
+    <section id="server">
+      <label for="api-base">Server</label>
+      <div id="server-row">
+        <input id="api-base" type="url" spellcheck="false" />
+        <button id="save-api" type="button">Save</button>
+      </div>
+    </section>
+
+    <p id="hint">Shortcuts: Ctrl+Shift+Left and Ctrl+Shift+Right. Leave /play closed while this is playing.</p>
+
+    <script src="lib.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
