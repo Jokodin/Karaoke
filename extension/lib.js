@@ -124,13 +124,36 @@ const Karaoke = {
       return { currentIndex: 0, currentUrl: "", started: false };
     }
 
-    if (state.currentUrl) {
-      const found = queue.findIndex((item) => item.url === state.currentUrl);
-      if (found !== -1) {
+    if (state.started && state.currentUrl) {
+      const indexStillMatches =
+        state.currentIndex >= 0 &&
+        state.currentIndex < queue.length &&
+        queue[state.currentIndex].url === state.currentUrl;
+      if (indexStillMatches) {
         return {
-          currentIndex: found,
+          currentIndex: state.currentIndex,
           currentUrl: state.currentUrl,
-          started: state.started,
+          started: true,
+        };
+      }
+
+      // The song at that slot changed. Prefer the copy nearest the old index
+      // so a repeated link does not snap back to the first one.
+      let nearest = -1;
+      let nearestDistance = Infinity;
+      queue.forEach((item, index) => {
+        if (item.url !== state.currentUrl) return;
+        const distance = Math.abs(index - state.currentIndex);
+        if (distance < nearestDistance) {
+          nearest = index;
+          nearestDistance = distance;
+        }
+      });
+      if (nearest !== -1) {
+        return {
+          currentIndex: nearest,
+          currentUrl: state.currentUrl,
+          started: true,
         };
       }
     }
@@ -166,6 +189,15 @@ const Karaoke = {
     const existingId = await Karaoke.getTabId();
     if (existingId != null) {
       try {
+        const existing = await chrome.tabs.get(existingId);
+        const sameVideo =
+          Karaoke.extractVideoId(existing.url) !== null &&
+          Karaoke.extractVideoId(existing.url) === Karaoke.extractVideoId(url);
+        if (sameVideo) {
+          // A second copy of the same link would otherwise stay on the first one.
+          await chrome.tabs.update(existingId, { url: "about:blank" });
+          await Karaoke.waitForTabComplete(existingId);
+        }
         const tab = await chrome.tabs.update(existingId, { url, active: true });
         if (tab.windowId != null) {
           await chrome.windows.update(tab.windowId, { focused: true });
@@ -192,5 +224,20 @@ const Karaoke = {
     const windows = await chrome.windows.getAll({ windowTypes: ["normal"] });
     const focused = windows.find((win) => win.focused);
     return (focused || windows[0] || {}).id;
+  },
+
+  waitForTabComplete(tabId) {
+    return new Promise((resolve) => {
+      const finish = () => {
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        clearTimeout(timeout);
+        resolve();
+      };
+      const onUpdated = (updatedId, info) => {
+        if (updatedId === tabId && info.status === "complete") finish();
+      };
+      const timeout = setTimeout(finish, 1500);
+      chrome.tabs.onUpdated.addListener(onUpdated);
+    });
   },
 };

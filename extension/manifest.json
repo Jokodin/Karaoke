@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Karaoke Queue Player",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Plays the karaoke queue on YouTube. The /play page stays available as a fallback.",
   "permissions": ["tabs", "storage", "alarms", "windows"],
   "host_permissions": [

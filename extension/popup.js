@@ -57,10 +57,12 @@ function render(state) {
     emptyRow.className = "empty";
     emptyRow.textContent = "Songs you add at the homepage will show up here.";
     queueEl.appendChild(emptyRow);
+    queueEl.scrollTop = 0;
     return;
   }
 
-  state.queue.forEach((item, index) => {
+  for (let index = state.queue.length - 1; index >= 0; index--) {
+    const item = state.queue[index];
     const button = document.createElement("button");
     button.type = "button";
     button.className = "queue-item";
@@ -73,7 +75,8 @@ function render(state) {
     button.disabled = busy;
     button.addEventListener("click", () => send("play", { index }));
     queueEl.appendChild(button);
-  });
+  }
+  queueEl.scrollTop = 0;
 }
 
 async function load() {

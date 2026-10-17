@@ -416,6 +416,7 @@
             return;
           }
 
+          await restoreNowPlaying();
           playCurrentVideo();
         } catch (err) {
           console.error("Failed to load queue:", err);
@@ -431,6 +432,32 @@
         }
       }
 
+      async function restoreNowPlaying() {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/now-playing?t=${Date.now()}`);
+          if (!response.ok) return;
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) return;
+          const data = await response.json();
+          if (Number.isInteger(data.index) && data.index >= 0 && data.index < queue.length) {
+            currentIndex = data.index;
+          }
+        } catch (err) {
+          console.error("Failed to restore now playing:", err);
+        }
+      }
+
+      function rememberNowPlaying() {
+        const index = currentIndex;
+        fetch(`${API_BASE_URL}/api/now-playing`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ index }),
+        }).catch((err) => {
+          console.error("Failed to save now playing:", err);
+        });
+      }
+
       function playCurrentVideo() {
         // Note: We don't close existing YouTube windows - user can close them manually
 
@@ -438,6 +465,8 @@
           console.log("No video at current index");
           return;
         }
+
+        rememberNowPlaying();
 
         const currentVideo = queue[currentIndex];
         const videoId = extractVideoId(currentVideo.url);

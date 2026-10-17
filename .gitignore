@@ -4,6 +4,7 @@ node_modules/
 # Local runtime data (recreated by the server)
 queue.json
 settings.json
+playing.json
 
 # Environment / secrets
 .env
