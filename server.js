@@ -25,9 +25,11 @@ app.use((req, res, next) => {
 
 const QUEUE_FILE = path.join(process.cwd(), "queue.json");
 const SETTINGS_FILE = path.join(process.cwd(), "settings.json");
+const PLAYING_FILE = path.join(process.cwd(), "playing.json");
 
 let queue = [];
 let settings = { allowDuplicates: false }; // Default to false
+let nowPlaying = null; // { index, url, title } or null
 
 // Load queue
 if (fs.existsSync(QUEUE_FILE)) {
@@ -59,6 +61,43 @@ if (fs.existsSync(SETTINGS_FILE)) {
 	// Create a fresh settings file
 	fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
 	console.log("✅ Created new settings.json");
+}
+
+// Load the song that was playing so a page refresh can resume it
+if (fs.existsSync(PLAYING_FILE)) {
+	try {
+		const data = JSON.parse(fs.readFileSync(PLAYING_FILE));
+		if (data && Number.isInteger(data.index)) {
+			nowPlaying = data;
+		}
+	} catch (err) {
+		console.error("⚠ Failed to parse playing.json. Starting with nothing playing.");
+	}
+}
+
+function saveNowPlaying() {
+	fs.writeFileSync(PLAYING_FILE, JSON.stringify(nowPlaying, null, 2));
+}
+
+function resolveNowPlaying() {
+	if (!nowPlaying || queue.length === 0) return null;
+
+	const index = nowPlaying.index;
+	if (Number.isInteger(index) && index >= 0 && index < queue.length) {
+		const atIndex = queue[index];
+		if (!nowPlaying.url || atIndex.url === nowPlaying.url) {
+			return { index, url: atIndex.url, title: atIndex.title };
+		}
+	}
+
+	if (nowPlaying.url) {
+		const byUrl = queue.findIndex((video) => video.url === nowPlaying.url);
+		if (byUrl !== -1) {
+			return { index: byUrl, url: queue[byUrl].url, title: queue[byUrl].title };
+		}
+	}
+
+	return null;
 }
 
 
@@ -206,9 +245,39 @@ app.post("/api/duplicate-setting", (req, res) => {
 app.delete("/api/queue", (req, res) => {
 	console.log("Clearing queue");
 	queue = [];
+	nowPlaying = null;
 	fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue, null, 2));
+	saveNowPlaying();
 	console.log("Queue cleared and saved");
 	res.status(200).json({ success: true });
+});
+
+app.get("/api/now-playing", (req, res) => {
+	const current = resolveNowPlaying();
+	res.json(current ?? { index: null });
+});
+
+app.post("/api/now-playing", (req, res) => {
+	const { index } = req.body;
+
+	if (index === null) {
+		nowPlaying = null;
+		saveNowPlaying();
+		return res.json({ success: true, nowPlaying: null });
+	}
+
+	if (!Number.isInteger(index) || index < 0 || index >= queue.length) {
+		return res.status(400).json({
+			error: "Invalid now-playing index",
+			details: "index must point at a song currently in the queue"
+		});
+	}
+
+	const video = queue[index];
+	nowPlaying = { index, url: video.url, title: video.title };
+	saveNowPlaying();
+	console.log("Now playing:", nowPlaying.title, "at index", index);
+	res.json({ success: true, nowPlaying });
 });
 
 // 404 handler for unmatched API routes - must be before static file serving
